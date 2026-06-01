@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FoodApp</title>
+  <link rel="icon" href="p.png" type="image/png">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+
+  <style>
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #ffe3e3, #fff6f0);
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .header {
+      margin-top: 40px;
+      margin-bottom: 20px;
+    }
+
+    .search-box {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 50px;
+    }
+
+    .search-box input {
+      width: 300px;
+      padding: 12px 15px;
+      border-radius: 25px 0 0 25px;
+      border: 2px solid #ff6b81;
+      outline: none;
+      transition: all 0.3s;
+    }
+
+    .search-box input:focus {
+      border-color: #ff4757;
+      box-shadow: 0 0 10px rgba(255,71,87,0.3);
+    }
+
+    .search-box button {
+      border-radius: 0 25px 25px 0;
+      border: none;
+      background: #ff6b81;
+      color: white;
+      padding: 12px 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .search-box button:hover {
+      background: #ff4757;
+    }
+
+    .meal-card {
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+
+    .meal-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .meal-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
+
+    .footer {
+      background-color: #ff6b81;
+      color: white;
+      padding: 20px 0;
+      margin-top: 50px;
+    }
+
+    .footer a {
+      color: white;
+      text-decoration: none;
+    }
+
+    .modal-img {
+      width: 100%;
+      border-radius: 10px;
+      margin-bottom: 15px;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="container text-center">
+    <h1 class="header"><i class="fa-solid fa-bowl-rice"></i> FoodApp</h1>
+    <p class="text-muted">Cari makanan favoritmu dan lihat resep lengkapnya!</p>
+
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Contoh: Arrabiata...">
+      <button id="searchBtn">Search</button>
+    </div>
+
+    <div id="mealResults" class="row justify-content-center"></div>
+  </div>
+
+  <!-- Modal Detail -->
+  <div class="modal fade" id="mealModal" tabindex="-1" aria-labelledby="mealModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="mealModalLabel">Detail Makanan</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <img id="modalImg" class="modal-img" src="" alt="Meal">
+          <h4 id="modalTitle"></h4>
+          <p><strong>Area:</strong> <span id="modalArea"></span> | <strong>Kategori:</strong> <span id="modalCategory"></span></p>
+          <h5>Instruksi:</h5>
+          <p id="modalInstructions"></p>
+          <h5>Bahan & Takaran:</h5>
+          <ul id="modalIngredients"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer text-center">
+    <p>© 2025 FoodApp | Nikmati harimu dengan makanan yang enak</p>
+  </footer>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    async function searchMeal(query) {
+      const resultEl = document.getElementById("mealResults");
+      resultEl.innerHTML = "";
+
+      query = (query || "").trim();
+      if (!query) {
+        resultEl.innerHTML = "<p class='text-muted'>Masukkan nama makanan dulu!</p>";
+        return;
+      }
+
+      const url = `https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(query)}`;
+      resultEl.innerHTML = "<p>Loading...</p>";
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+
+        const data = await res.json();
+
+        if (!data || !data.meals) {
+          resultEl.innerHTML = "<p class='text-danger'>Makanan tidak ditemukan.</p>";
+          return;
+        }
+
+        resultEl.innerHTML = "";
+        data.meals.forEach(meal => {
+          const col = document.createElement("div");
+          col.className = "col-md-4 mb-4";
+          col.innerHTML = `
+            <div class="card meal-card">
+              <img src="${meal.strMealThumb}" class="card-img-top" alt="${meal.strMeal}">
+              <div class="card-body">
+                <h5 class="card-title">${meal.strMeal}</h5>
+                <p class="card-text">${meal.strArea || "-"} | ${meal.strCategory || "-"}</p>
+                <button class="btn btn-danger btn-sm btn-detail" data-id="${meal.idMeal}">Lihat Detail</button>
+              </div>
+            </div>
+          `;
+          resultEl.appendChild(col);
+        });
+
+        // Tambahkan event listener untuk tombol detail
+        document.querySelectorAll(".btn-detail").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-id");
+            await showMealDetail(id);
+          });
+        });
+
+      } catch (err) {
+        console.error(err);
+        resultEl.innerHTML = `<div class="alert alert-danger">Terjadi kesalahan: ${err.message}</div>`;
+      }
+    }
+
+    async function showMealDetail(id) {
+      const url = `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const meal = data.meals[0];
+
+        document.getElementById("modalImg").src = meal.strMealThumb;
+        document.getElementById("modalTitle").textContent = meal.strMeal;
+        document.getElementById("modalArea").textContent = meal.strArea;
+        document.getElementById("modalCategory").textContent = meal.strCategory;
+        document.getElementById("modalInstructions").textContent = meal.strInstructions;
+
+        const ingList = document.getElementById("modalIngredients");
+        ingList.innerHTML = "";
+        for (let i = 1; i <= 20; i++) {
+          const ingredient = meal[`strIngredient${i}`];
+          const measure = meal[`strMeasure${i}`];
+          if (ingredient && ingredient.trim()) {
+            const li = document.createElement("li");
+            li.textContent = `${ingredient} - ${measure}`;
+            ingList.appendChild(li);
+          }
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById("mealModal"));
+        modal.show();
+
+      } catch (err) {
+        alert("Gagal mengambil detail makanan: " + err.message);
+      }
+    }
+
+    document.getElementById("searchBtn").addEventListener("click", () => {
+      const q = document.getElementById("searchInput").value;
+      searchMeal(q);
+    });
+
+    document.getElementById("searchInput").addEventListener("keypress", function(e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        document.getElementById("searchBtn").click();
+      }
+    });
+  </script>
+</body>
+</html>
